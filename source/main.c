@@ -12,6 +12,8 @@
 
 #include <stdio.h>
 
+#include "i2c_slave.h"
+
 #if !defined(__CC_ARM) && defined(__ARMCC_VERSION) && !defined(__OPTIMIZE__)
     /*
     Without this directive, it does not start if -o0 optimization is used and the "main"
@@ -29,6 +31,8 @@
  */
 int main(void)
 {
+    I2C1_Slave_init();
+
     for(;;)
     {
         
