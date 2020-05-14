@@ -22,8 +22,12 @@
 #define RTE_DEVICE_STDPERIPH_GPIO
 /*  Keil::Device:StdPeriph Drivers:I2C:3.5.0 */
 #define RTE_DEVICE_STDPERIPH_I2C
+/*  Keil::Device:StdPeriph Drivers:PWR:3.5.0 */
+#define RTE_DEVICE_STDPERIPH_PWR
 /*  Keil::Device:StdPeriph Drivers:RCC:3.5.0 */
 #define RTE_DEVICE_STDPERIPH_RCC
+/*  Keil::Device:StdPeriph Drivers:RTC:3.5.0 */
+#define RTE_DEVICE_STDPERIPH_RTC
 
 
 #endif /* RTE_COMPONENTS_H */

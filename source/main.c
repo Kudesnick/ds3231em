@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 
+#include "rtc.h"
 #include "i2c_slave.h"
 
 #if !defined(__CC_ARM) && defined(__ARMCC_VERSION) && !defined(__OPTIMIZE__)
@@ -31,6 +32,7 @@
  */
 int main(void)
 {
+	RTC_Init();
     I2C1_Slave_init();
 
     for(;;)
