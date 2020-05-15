@@ -5,8 +5,10 @@
 #include "rtc.h"
 
 //========================================================================================
-unsigned char RTC_Init(void)
+bool RTC_Init(void)
 {
+    bool result = false;
+
 	// Дозволити тактування модулів управління живленням і управлінням резервної областю
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);
 	// Дозволити доступ до області резервних даних
@@ -31,9 +33,15 @@ unsigned char RTC_Init(void)
 		// Чекаємо на синхронізацію
 		RTC_WaitForSynchro();
 
-		return 1;
+		result = true;
 	}
-	return 0;
+    
+    NVIC_SetPriority(RTC_IRQn, 0);
+    NVIC_EnableIRQ(RTC_IRQn);
+    
+    RTC_ITConfig(RTC_IT_SEC, ENABLE);
+    
+	return result;
 }
 
 // Get current date
@@ -111,4 +119,31 @@ uint32_t RTC_GetRTC_Counter(RTC_DateTimeTypeDef* RTC_DateTimeStruct) {
 	JDN+=(RTC_DateTimeStruct->RTC_Seconds);
 
 	return JDN;
+}
+
+void RTC_IRQHandler(void)
+{
+    static bool init = false;
+    
+    if (!init)
+    {
+        static GPIO_InitTypeDef  GPIO_InitStructure =
+        {
+            .GPIO_Pin =  GPIO_Pin_13,
+            .GPIO_Speed = GPIO_Speed_50MHz,
+            .GPIO_Mode = GPIO_Mode_Out_PP,
+        };
+
+        RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOC, ENABLE);
+        GPIO_Init(GPIOC, &GPIO_InitStructure);
+        init = true;
+    }
+
+    if (RTC_GetITStatus(RTC_IT_SEC))
+    {
+        RTC_ClearITPendingBit(RTC_IT_SEC);
+        
+        BitAction new_val = GPIO_ReadOutputDataBit(GPIOC, GPIO_Pin_13) ? Bit_RESET : Bit_SET;
+        GPIO_WriteBit(GPIOC, GPIO_Pin_13, new_val);
+    }
 }

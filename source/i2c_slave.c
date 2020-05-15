@@ -26,7 +26,6 @@ static void set_i2c1_ram(uint8_t adr, uint8_t val)
 void I2C1_Slave_init(void)
 {
     GPIO_InitTypeDef  GPIO_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
     I2C_InitTypeDef  I2C_InitStructure;
 
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
@@ -42,15 +41,12 @@ void I2C1_Slave_init(void)
     GPIO_Init(GPIOB, &GPIO_InitStructure);
 
     /* Configure the I2C event priority */
-    NVIC_InitStructure.NVIC_IRQChannel                   = I2C1_EV_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority        = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd                = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
+    NVIC_SetPriority(I2C1_EV_IRQn, 0);
+    NVIC_EnableIRQ(I2C1_EV_IRQn);
 
     //Configure I2C error interrupt to have the higher priority.
-    NVIC_InitStructure.NVIC_IRQChannel = I2C1_ER_IRQn;
-    NVIC_Init(&NVIC_InitStructure);
+    NVIC_SetPriority(I2C1_ER_IRQn, 0);
+    NVIC_EnableIRQ(I2C1_ER_IRQn);
 
     /* I2C configuration */
     I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
