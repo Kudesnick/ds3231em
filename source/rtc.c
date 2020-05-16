@@ -32,6 +32,9 @@ bool RTC_Init(void)
 
 		// ×åêàºìî íà ñèíõğîí³çàö³ş
 		RTC_WaitForSynchro();
+        
+        // Magic delay
+        for (volatile uint16_t i = UINT16_MAX; i > 0; i--);
 
 		result = true;
 	}
