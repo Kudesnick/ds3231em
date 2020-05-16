@@ -397,6 +397,11 @@
               <FileType>1</FileType>
               <FilePath>..\source\rtc.c</FilePath>
             </File>
+            <File>
+              <FileName>ds3231.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\ds3231.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

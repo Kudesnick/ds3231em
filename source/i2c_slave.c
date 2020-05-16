@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "i2c_slave.h"
+#include "ds3231.h"
 
 #include "RTE_Components.h"
 #include CMSIS_device_header
@@ -8,21 +9,8 @@
 /*******************************************************************/
 I2C1_MODE_t i2c1_mode = I2C1_MODE_WAITING;
 
-uint8_t i2c1_ram_adr = 0;
-uint8_t i2c1_ram[I2C1_RAM_SIZE];
-
 /*******************************************************************/
-static uint8_t get_i2c1_ram(uint8_t adr)
-{
-    return i2c1_ram[adr];
-}
 
-static void set_i2c1_ram(uint8_t adr, uint8_t val)
-{
-    i2c1_ram[adr] = val;
-}
-
-/*******************************************************************/
 void I2C1_Slave_init(void)
 {
     GPIO_InitTypeDef  GPIO_InitStructure;
@@ -56,8 +44,8 @@ void I2C1_Slave_init(void)
     I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
     I2C_InitStructure.I2C_ClockSpeed = I2C1_CLOCK_FRQ;
 
-    I2C_OwnAddress2Config(I2C1, I2CSLAVE_ADDR2 << 1);
-    I2C_DualAddressCmd(I2C1, ENABLE);
+    // I2C_OwnAddress2Config(I2C1, I2CSLAVE_ADDR2 << 1);
+    // I2C_DualAddressCmd(I2C1, ENABLE);
 
     /* I2C Peripheral Enable */
     I2C_Cmd(I2C1, ENABLE);
@@ -115,15 +103,13 @@ void I2C1_EV_IRQHandler(void)
         {
             i2c1_mode = I2C1_MODE_ADR_BYTE;
             // Set current ram address
-            i2c1_ram_adr = wert;
+            ds_set_addr(wert);
         }
         else
         {
             i2c1_mode = I2C1_MODE_DATA_BYTE_WR;
             // Store data in RAM
-            set_i2c1_ram(i2c1_ram_adr, wert);
-            // Next ram adress
-            i2c1_ram_adr++;
+            ds_write(wert);
         }
     }
     else if (false
@@ -134,25 +120,22 @@ void I2C1_EV_IRQHandler(void)
         // Master has sent the slave address to read data from the slave
         i2c1_mode = I2C1_MODE_SLAVE_ADR_RD;
         // Read data from RAM
-        wert = get_i2c1_ram(i2c1_ram_adr);
+        wert = ds_read();
         // Send data to the master
         I2C_SendData(I2C1, wert);
-        // Next ram adress
-        i2c1_ram_adr++;
     }
     else if (event == I2C_EVENT_SLAVE_BYTE_TRANSMITTED)
     {
         // Master wants to read another byte of data from the slave
         i2c1_mode = I2C1_MODE_DATA_BYTE_RD;
         // Read data from RAM
-        wert = get_i2c1_ram(i2c1_ram_adr);
+        wert = ds_read();
         // Send data to the master
         I2C_SendData(I2C1, wert);
-        // Next ram adress
-        i2c1_ram_adr++;
     }
     else if (event | I2C_EVENT_SLAVE_STOP_DETECTED)
     {
+        // ds_end_transaction();
         // Master has STOP sent
         I2C1_ClearFlag();
         i2c1_mode = I2C1_MODE_WAITING;

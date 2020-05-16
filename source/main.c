@@ -14,6 +14,7 @@
 
 #include "rtc.h"
 #include "i2c_slave.h"
+#include "ds3231.h"
 
 #if !defined(__CC_ARM) && defined(__ARMCC_VERSION) && !defined(__OPTIMIZE__)
     /*
@@ -32,7 +33,7 @@
  */
 int main(void)
 {
-	RTC_Init();
+	ds_init();
     I2C1_Slave_init();
 
     for(;;);
