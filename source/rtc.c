@@ -4,6 +4,8 @@
 
 #include "rtc.h"
 
+#define TST_BLINK
+
 //========================================================================================
 bool RTC_Init(void)
 {
@@ -41,15 +43,30 @@ bool RTC_Init(void)
     
     NVIC_SetPriority(RTC_IRQn, 0);
     NVIC_EnableIRQ(RTC_IRQn);
+    NVIC_SetPriority(RTCAlarm_IRQn, 0);
+    NVIC_EnableIRQ(RTCAlarm_IRQn);
     
     RTC_ITConfig(RTC_IT_SEC, ENABLE);
     
 	return result;
 }
 
+void rtc_set_alarm(uint32_t _time)
+{
+    RTC_SetAlarm(_time);
+    
+    RTC_ITConfig(RTC_IT_ALR, ENABLE);
+}
+
+__WEAK void rtc_callback(uint32_t _time)
+{
+    (void)_time;
+}
 
 void RTC_IRQHandler(void)
 {
+#ifdef TST_BLINK
+    // Test blinker
     static bool init = false;
     
     if (!init)
@@ -65,12 +82,25 @@ void RTC_IRQHandler(void)
         GPIO_Init(GPIOC, &GPIO_InitStructure);
         init = true;
     }
+    
+    BitAction new_val = GPIO_ReadOutputDataBit(GPIOC, GPIO_Pin_13) ? Bit_RESET : Bit_SET;
+    GPIO_WriteBit(GPIOC, GPIO_Pin_13, new_val);
+#endif
 
     if (RTC_GetITStatus(RTC_IT_SEC))
     {
         RTC_ClearITPendingBit(RTC_IT_SEC);
-        
-        BitAction new_val = GPIO_ReadOutputDataBit(GPIOC, GPIO_Pin_13) ? Bit_RESET : Bit_SET;
-        GPIO_WriteBit(GPIOC, GPIO_Pin_13, new_val);
     }
+
+    rtc_callback(RTC_GetCounter());
+}
+
+void RTCAlarm_IRQHandler(void)
+{
+    if (RTC_GetITStatus(RTC_IT_ALR))
+    {
+        RTC_ClearITPendingBit(RTC_IT_ALR);
+    }
+    
+    rtc_callback(RTC_GetCounter());
 }

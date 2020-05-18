@@ -9,6 +9,7 @@
 /*******************************************************************/
 I2C1_MODE_t i2c1_mode = I2C1_MODE_WAITING;
 
+I2CSLAVE_ADDR_t curr_addr;
 /*******************************************************************/
 
 void I2C1_Slave_init(void)
@@ -44,8 +45,8 @@ void I2C1_Slave_init(void)
     I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
     I2C_InitStructure.I2C_ClockSpeed = I2C1_CLOCK_FRQ;
 
-    // I2C_OwnAddress2Config(I2C1, I2CSLAVE_ADDR2 << 1);
-    // I2C_DualAddressCmd(I2C1, ENABLE);
+    I2C_OwnAddress2Config(I2C1, I2CSLAVE_ADDR2 << 1);
+    I2C_DualAddressCmd(I2C1, ENABLE);
 
     /* I2C Peripheral Enable */
     I2C_Cmd(I2C1, ENABLE);
@@ -86,11 +87,15 @@ void I2C1_EV_IRQHandler(void)
     // Reading last event
     event = I2C_GetLastEvent(I2C1);
 
-    if (false
-        || event == I2C_EVENT_SLAVE_RECEIVER_ADDRESS_MATCHED
-        || event == I2C_EVENT_SLAVE_RECEIVER_SECONDADDRESS_MATCHED
-       )
+    if (event == I2C_EVENT_SLAVE_RECEIVER_ADDRESS_MATCHED)
     {
+        curr_addr = I2CSLAVE_ADDR1;
+        // Master has sent the slave address to send data to the slave
+        i2c1_mode = I2C1_MODE_SLAVE_ADR_WR;
+    }
+    else if (event == I2C_EVENT_SLAVE_RECEIVER_SECONDADDRESS_MATCHED)
+    {
+        curr_addr = I2CSLAVE_ADDR2;
         // Master has sent the slave address to send data to the slave
         i2c1_mode = I2C1_MODE_SLAVE_ADR_WR;
     }
@@ -103,20 +108,32 @@ void I2C1_EV_IRQHandler(void)
         {
             i2c1_mode = I2C1_MODE_ADR_BYTE;
             // Set current ram address
-            ds_set_addr(wert);
+            if (curr_addr == I2CSLAVE_ADDR1)
+            {
+                ds_set_addr(wert);
+            }
+            else if (curr_addr == I2CSLAVE_ADDR2)
+            {
+                // @todo insert function to second device
+            }
         }
         else
         {
             i2c1_mode = I2C1_MODE_DATA_BYTE_WR;
             // Store data in RAM
-            ds_write(wert);
+            if (curr_addr == I2CSLAVE_ADDR1)
+            {
+                ds_write(wert);
+            }
+            else if (curr_addr == I2CSLAVE_ADDR2)
+            {
+                // @todo insert function to second device
+            }
         }
     }
-    else if (false
-             || event == I2C_EVENT_SLAVE_TRANSMITTER_ADDRESS_MATCHED
-             || event == I2C_EVENT_SLAVE_TRANSMITTER_SECONDADDRESS_MATCHED
-            )
+    else if (event == I2C_EVENT_SLAVE_TRANSMITTER_ADDRESS_MATCHED)
     {
+        curr_addr = I2CSLAVE_ADDR1;
         // Master has sent the slave address to read data from the slave
         i2c1_mode = I2C1_MODE_SLAVE_ADR_RD;
         // Read data from RAM
@@ -124,18 +141,36 @@ void I2C1_EV_IRQHandler(void)
         // Send data to the master
         I2C_SendData(I2C1, wert);
     }
+    else if (event == I2C_EVENT_SLAVE_TRANSMITTER_SECONDADDRESS_MATCHED)
+    {
+        curr_addr = I2CSLAVE_ADDR2;
+        // Master has sent the slave address to read data from the slave
+        i2c1_mode = I2C1_MODE_SLAVE_ADR_RD;
+        // Read data from RAM
+        // @todo insert function to second device
+        wert = 0;
+        // Send data to the master
+        I2C_SendData(I2C1, wert);    
+    }
     else if (event == I2C_EVENT_SLAVE_BYTE_TRANSMITTED)
     {
         // Master wants to read another byte of data from the slave
         i2c1_mode = I2C1_MODE_DATA_BYTE_RD;
         // Read data from RAM
-        wert = ds_read();
+        if (curr_addr == I2CSLAVE_ADDR1)
+        {
+            wert = ds_read();
+        }
+        else if (curr_addr == I2CSLAVE_ADDR2)
+        {
+            // @todo insert function to second device
+            wert = 0;
+        }
         // Send data to the master
         I2C_SendData(I2C1, wert);
     }
     else if (event | I2C_EVENT_SLAVE_STOP_DETECTED)
     {
-        // ds_end_transaction();
         // Master has STOP sent
         I2C1_ClearFlag();
         i2c1_mode = I2C1_MODE_WAITING;

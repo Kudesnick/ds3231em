@@ -1,8 +1,12 @@
 // see: https://blog.avislab.com/stm32-i2c-slave_ru/
 
 /*******************************************************************/
-#define I2CSLAVE_ADDR1      0x68   // DS3231
-#define I2CSLAVE_ADDR2      0x48   // ADS1115
+
+typedef enum
+{
+    I2CSLAVE_ADDR1 = 0x68,   // DS1307/DS32xx
+    I2CSLAVE_ADDR2  =0x48,   // ADS1115
+} I2CSLAVE_ADDR_t;
 
 #define   I2C1_CLOCK_FRQ    400000 // I2C-Frq in Hz (400 kHz)
 #define   I2C1_RAM_SIZE     0x100  // RAM Size in Byte (0...255)

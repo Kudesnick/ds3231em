@@ -4,3 +4,4 @@
 #include <stdbool.h>
 
 bool RTC_Init(void);
+void rtc_alarm_callback(uint32_t _time);
