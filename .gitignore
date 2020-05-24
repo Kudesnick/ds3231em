@@ -4,3 +4,4 @@ keil*/DebugConfig
 *.uvgui.*
 *.scvd
 keil*/Jlink*
+.vscode/
