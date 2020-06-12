@@ -150,6 +150,12 @@ void setup()
     {
         Serial.println("Err");
     }
+
+    float temp = readDS3231temp();
+
+    Serial.print("temperature = ");
+    Serial.print(temp / 4, 2);
+    Serial.println(" C");
 }
 
 /**
@@ -208,6 +214,51 @@ void setDS3231alarm(const enum al_t _al_num, const ds_time &_tm)
         Wire.write(0b00000100 | ((_al_num == AL_1) ? 1 : 2));
         Wire.write(0b00000000);
     Wire.endTransmission();
+}
+
+int readDS3231temp()
+{
+    Wire.beginTransmission(DS3231_I2C_ADDRESS);
+    Wire.write(0x0E); // set DS3231 register pointer to 00h
+    Wire.endTransmission();
+    Wire.requestFrom(DS3231_I2C_ADDRESS, 7);
+    byte tmp = Wire.read();
+    
+    if ((tmp & 0x20) == 0)
+    {
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write(0x0E); // set DS3231 register pointer to 00h
+        Wire.write(tmp | 0x20);
+        Wire.endTransmission();
+    }
+
+    delay(10);
+
+    for(;;delay(10))
+    {
+        Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write(0x0E); // set DS3231 register pointer to 00h
+        Wire.endTransmission();
+        Wire.requestFrom(DS3231_I2C_ADDRESS, 7);
+        
+        tmp = Wire.read();
+        if (tmp & 0x20)
+        {
+            continue;
+        }
+        
+        tmp = Wire.read();
+        if (tmp & 0x04)
+        {
+            continue;
+        }
+                
+        Wire.read();
+        int temp = Wire.read() << 8;
+        temp |= Wire.read();
+        temp /= 64;
+        return temp;
+    }
 }
 
 /**
