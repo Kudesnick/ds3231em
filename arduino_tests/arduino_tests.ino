@@ -12,6 +12,7 @@
 
 /// Address of i2c device
 #define DS3231_I2C_ADDRESS 0x68
+#define PIN_LED 13
 
 /// structure of time
 struct ds_time
@@ -23,6 +24,11 @@ struct ds_time
     byte dayOfMonth; ///< day of month (1-31)
     byte month;      ///< month (1-12)
     word year;       ///< year (1900-2099)
+
+    friend bool operator==(const ds_time& left, const ds_time& right)
+    {
+        return (memcmp(&left, &right, sizeof(ds_time)) == 0);
+    };
 };
 
 /// array of name of week's days
@@ -63,12 +69,26 @@ byte bcdToDec(byte val)
 /// Hardware settings and time set
 void setup()
 {
+    pinMode(PIN_LED, INPUT_PULLUP);
+
     Wire.begin();
     Serial.begin(9600);
 
-    // set the initial time here:
-    // DS3231 seconds, minutes, hours, day, date, month, year
-    setDS3231time((ds_time){59,59,23,5,31,12,1999});
+    ds_time tm;
+    // Test of year and day of week increment
+    Serial.print("test 01 - ");
+    tm = {59,59,23,5,31,12,1999};
+    setDS3231time(tm);
+    delay(1500);
+    readDS3231time(tm);
+    if (tm == ds_time{0, 0, 0, 6, 1, 1, 2000})
+    {
+        Serial.println("Ok");  
+    }
+    else
+    {
+        Serial.println("Err");
+    }
 }
 
 /**
@@ -125,40 +145,28 @@ void readDS3231time(ds_time &_tm)
     }
 }
 
+void printDec(byte _val, char _flood = '\0')
+{
+    if (_flood != '\0' && _val < 10)
+    {
+        Serial.print(_flood);
+    }
+    Serial.print(_val, DEC);
+}
+
 /// output time to terminal
 void displayTime(ds_time &_tm)
 {
     // send it to the serial monitor
-    if (_tm.hour < 10)
-    {
-        Serial.print(" ");
-    }
-    Serial.print(_tm.hour, DEC);
-    // convert the byte variable to a decimal number when displayed
+    printDec(_tm.hour, ' ');
     Serial.print(":");
-    if (_tm.minute < 10)
-    {
-        Serial.print("0");
-    }
-    Serial.print(_tm.minute, DEC);
+    printDec(_tm.minute, '0');
     Serial.print(":");
-    if (_tm.second < 10)
-    {
-        Serial.print("0");
-    }
-    Serial.print(_tm.second, DEC);
+    printDec(_tm.second, '0');
     Serial.print(" ");
-    if (_tm.dayOfMonth < 10)
-    {
-        Serial.print(" ");
-    }    
-    Serial.print(_tm.dayOfMonth, DEC);
+    printDec(_tm.dayOfMonth, ' ');
     Serial.print("/");
-    if (_tm.month < 10)
-    {
-        Serial.print("0");
-    }
-    Serial.print(_tm.month, DEC);
+    printDec(_tm.month, '0');
     Serial.print("/");
     Serial.print(_tm.year, DEC);
     Serial.print(" ");
