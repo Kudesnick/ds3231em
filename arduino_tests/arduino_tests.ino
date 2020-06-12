@@ -14,6 +14,12 @@
 #define DS3231_I2C_ADDRESS 0x68
 #define PIN_LED 13
 
+enum al_t
+{
+    AL_1,
+    AL_2
+};
+
 /// structure of time
 struct ds_time
 {
@@ -74,14 +80,69 @@ void setup()
     Wire.begin();
     Serial.begin(9600);
 
-    ds_time tm;
     // Test of year and day of week increment
     Serial.print("test 01 - ");
-    tm = {59,59,23,5,31,12,1999};
+    ds_time tm = {59,59,23,5,31,12,1999};
     setDS3231time(tm);
     delay(1500);
     readDS3231time(tm);
     if (tm == ds_time{0, 0, 0, 6, 1, 1, 2000})
+    {
+        Serial.println("Ok");  
+    }
+    else
+    {
+        Serial.println("Err");
+    }
+    
+    Serial.print("test 02 - ");
+    setDS3231alarm(AL_1, ds_time{2, 0, 0, 6, 1, 1, 2000});
+    bool tmp = true;
+    if (!digitalRead(PIN_LED))
+    {
+        tmp = false;  
+    }
+    delay(1000);
+    if (!digitalRead(PIN_LED))
+    {
+        tmp = false;  
+    }
+    delay(1000);
+    if (!digitalRead(PIN_LED) && tmp)
+    {
+        Serial.println("Ok");  
+    }
+    else
+    {
+        Serial.println("Err");
+    }
+
+    Serial.print("test 03 - ");
+    setDS3231time(ds_time{59, 0, 0, 6, 1, 1, 2000});
+    setDS3231alarm(AL_2, ds_time{0, 1, 0, 6, 1, 1, 2000});
+    tmp = true;
+    if (!digitalRead(PIN_LED))
+    {
+        tmp = false;  
+    }
+    delay(500);
+    if (!digitalRead(PIN_LED))
+    {
+        tmp = false;  
+    }
+    delay(1000);
+    if (!digitalRead(PIN_LED) && tmp)
+    {
+        Serial.println("Ok");  
+    }
+    else
+    {
+        Serial.println("Err");
+    }
+
+    Serial.print("test 04 - ");
+    setDS3231alarm(AL_2, ds_time{0, 1, 0, 6, 1, 1, 2000});
+    if (digitalRead(PIN_LED))
     {
         Serial.println("Ok");  
     }
@@ -115,6 +176,37 @@ void setDS3231time(const ds_time &_tm)
         Wire.write(decToBcd(_tm.month)); // set month    
     }
     Wire.write(decToBcd(_tm.year % 100)); // set year (1900 to 2099)
+    Wire.endTransmission();
+}
+
+void setDS3231alarm(const enum al_t _al_num, const ds_time &_tm)
+{
+    // sets time and date data to DS3231
+    Wire.beginTransmission(DS3231_I2C_ADDRESS);
+    if (_al_num == AL_1)
+    {
+        Wire.write(0x07);
+        Wire.write(decToBcd(_tm.second));
+    }
+    else
+    {
+        Wire.write(0x0B);
+    }
+    Wire.write(decToBcd(_tm.minute)); // set minutes
+    Wire.write(decToBcd(_tm.hour)); // set hours
+    if (_tm.dayOfWeek == 0)
+    {
+        Wire.write(decToBcd(_tm.dayOfMonth));
+    }
+    else
+    {
+        Wire.write(decToBcd(_tm.dayOfWeek) | 0x40);
+    }
+    Wire.endTransmission();
+    Wire.beginTransmission(DS3231_I2C_ADDRESS);
+        Wire.write(0x0E);
+        Wire.write(0b00000100 | ((_al_num == AL_1) ? 1 : 2));
+        Wire.write(0b00000000);
     Wire.endTransmission();
 }
 
