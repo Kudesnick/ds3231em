@@ -22,7 +22,7 @@ struct ds_time
     byte dayOfWeek;  ///< day of week (1=Sunday - 7=Saturday)
     byte dayOfMonth; ///< day of month (1-31)
     byte month;      ///< month (1-12)
-    byte year;       ///< year (1-99)
+    word year;       ///< year (1900-2099)
 };
 
 /// array of name of week's days
@@ -68,7 +68,7 @@ void setup()
 
     // set the initial time here:
     // DS3231 seconds, minutes, hours, day, date, month, year
-    // setDS3231time((ds_time){30,42,21,4,26,11,14});
+    setDS3231time((ds_time){59,59,23,5,31,12,1999});
 }
 
 /**
@@ -86,8 +86,15 @@ void setDS3231time(const ds_time &_tm)
     Wire.write(decToBcd(_tm.hour)); // set hours
     Wire.write(decToBcd(_tm.dayOfWeek)); // set day of week (1=Sunday, 7=Saturday)
     Wire.write(decToBcd(_tm.dayOfMonth)); // set date (1 to 31)
-    Wire.write(decToBcd(_tm.month)); // set month
-    Wire.write(decToBcd(_tm.year)); // set year (0 to 99)
+    if (_tm.year >= 2000)
+    {
+        Wire.write(decToBcd(_tm.month) | 0x80); // set month
+    }
+    else
+    {
+        Wire.write(decToBcd(_tm.month)); // set month    
+    }
+    Wire.write(decToBcd(_tm.year % 100)); // set year (1900 to 2099)
     Wire.endTransmission();
 }
 
@@ -109,45 +116,61 @@ void readDS3231time(ds_time &_tm)
     _tm.hour = bcdToDec(Wire.read() & 0x3f);
     _tm.dayOfWeek = bcdToDec(Wire.read());
     _tm.dayOfMonth = bcdToDec(Wire.read());
-    _tm.month = bcdToDec(Wire.read());
-    _tm.year = bcdToDec(Wire.read());
+    byte tmp = Wire.read();
+    _tm.month = bcdToDec(tmp & 0x1F);
+    _tm.year = bcdToDec(Wire.read()) + 1900;
+    if (tmp & 0x80)
+    {
+        _tm.year += 100;
+    }
 }
 
 /// output time to terminal
-void displayTime()
+void displayTime(ds_time &_tm)
 {
-    ds_time tm;
-    // retrieve data from DS3231
-    readDS3231time(tm);
     // send it to the serial monitor
-    Serial.print(tm.hour, DEC);
+    if (_tm.hour < 10)
+    {
+        Serial.print(" ");
+    }
+    Serial.print(_tm.hour, DEC);
     // convert the byte variable to a decimal number when displayed
     Serial.print(":");
-    if (tm.minute < 10)
+    if (_tm.minute < 10)
     {
         Serial.print("0");
     }
-    Serial.print(tm.minute, DEC);
+    Serial.print(_tm.minute, DEC);
     Serial.print(":");
-    if (tm.second < 10)
+    if (_tm.second < 10)
     {
         Serial.print("0");
     }
-    Serial.print(tm.second, DEC);
+    Serial.print(_tm.second, DEC);
     Serial.print(" ");
-    Serial.print(tm.dayOfMonth, DEC);
+    if (_tm.dayOfMonth < 10)
+    {
+        Serial.print(" ");
+    }    
+    Serial.print(_tm.dayOfMonth, DEC);
     Serial.print("/");
-    Serial.print(tm.month, DEC);
+    if (_tm.month < 10)
+    {
+        Serial.print("0");
+    }
+    Serial.print(_tm.month, DEC);
     Serial.print("/");
-    Serial.print(tm.year, DEC);
-    Serial.print(" Day of week: ");
-    byte wi = tm.dayOfWeek < sizeof(dayofweek) / sizeof(dayofweek[0]) ? tm.dayOfWeek : 0;
+    Serial.print(_tm.year, DEC);
+    Serial.print(" ");
+    byte wi = _tm.dayOfWeek < sizeof(dayofweek) / sizeof(dayofweek[0]) ? _tm.dayOfWeek : 0;
     Serial.println(dayofweek[wi]);
 }
 
 /// main loop
 void loop()
 {
-    displayTime(); // display the real-time clock data on the Serial Monitor,
+    ds_time tm;
+    readDS3231time(tm);
+    displayTime(tm); // display the real-time clock data on the Serial Monitor,
     delay(1000); // every second
 }
